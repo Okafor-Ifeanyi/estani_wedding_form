@@ -1,0 +1,28 @@
+# OPTIONAL local PostgreSQL. This project now points at a hosted database
+# (see server/.env), so nothing here runs by default. Keep it only if you want
+# to develop offline against a throwaway local DB:
+#
+#   docker compose -f docker-compose.local-db.yml up -d
+#   # then point DATABASE_URL and DIRECT_DATABASE_URL in server/.env at:
+#   # postgresql://wedding:wedding@localhost:5432/wedding_intake?schema=public
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: wedding_intake_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wedding
+      POSTGRES_PASSWORD: wedding
+      POSTGRES_DB: wedding_intake
+    ports:
+      - '5432:5432'
+    volumes:
+      - wedding_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U wedding -d wedding_intake']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  wedding_pgdata:

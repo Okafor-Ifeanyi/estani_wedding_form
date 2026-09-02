@@ -1,0 +1,7 @@
+{
+  // The seed script lives outside src/ and is run through tsx, never compiled
+  // into dist/. It gets its own project so `npm run typecheck` still covers it.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true, "rootDir": "." },
+  "include": ["prisma/**/*.ts", "src/**/*.ts"]
+}

@@ -1,0 +1,112 @@
+// Prisma schema for the Wedding Invitation intake system.
+//
+// Targets a hosted PostgreSQL database. `url` is the pooled endpoint the app
+// queries through; `directUrl` is the unpooled endpoint Prisma Migrate and
+// Introspection need (poolers do not support the session-level statements
+// migrations issue). Both are set in server/.env — see README for details.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+/// One intake form submission from a couple / planner.
+///
+/// High-signal fields the admin filters and sorts on are promoted to real
+/// columns. The complete, normalised answer set (every one of the ~90 fields)
+/// is kept in `data` so nothing is ever lost even as the form evolves.
+model Submission {
+  id        String            @id @default(cuid())
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  // Workflow state the admin drives during follow-up.
+  status    SubmissionStatus  @default(NEW)
+
+  // Promoted contact columns (queryable / shown in the list view).
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  contactRole  String?
+  domain       String?
+  deadline     String?        // free-form "when do you need it live" (kept as given)
+
+  // Promoted couple + day columns for the list view.
+  brideName   String?
+  groomName   String?
+  weddingDate String?
+  guestCount  Int?
+
+  // Everything the form captured, keyed by field name. Source of truth for
+  // the detail view and the exported brief.
+  data      Json
+
+  // How many of the form's fields the couple actually answered.
+  answered  Int               @default(0)
+  total     Int               @default(0)
+
+  notes     FollowUpNote[]
+  files     MediaFile[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([contactEmail])
+}
+
+enum SubmissionStatus {
+  NEW
+  IN_REVIEW
+  IN_PROGRESS
+  AWAITING_CLIENT
+  DONE
+  ARCHIVED
+}
+
+/// A follow-up note left by an admin against a submission.
+model FollowUpNote {
+  id           String     @id @default(cuid())
+  createdAt    DateTime   @default(now())
+  body         String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submissionId String
+  author       AdminUser  @relation(fields: [authorId], references: [id])
+  authorId     String
+
+  @@index([submissionId])
+}
+
+/// A photo / audio file the couple uploaded, stored on disk (swap for S3 in prod).
+model MediaFile {
+  id           String     @id @default(cuid())
+  createdAt    DateTime   @default(now())
+  field        String     // which form input it came from, e.g. "photo_hero"
+  originalName String
+  storedName   String     // filename on disk / object key
+  mimeType     String
+  size         Int
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submissionId String
+
+  @@index([submissionId])
+}
+
+/// An admin who can log in to review submissions and follow up.
+model AdminUser {
+  id           String         @id @default(cuid())
+  createdAt    DateTime       @default(now())
+  email        String         @unique
+  name         String
+  passwordHash String
+  role         AdminRole      @default(ADMIN)
+  notes        FollowUpNote[]
+}
+
+enum AdminRole {
+  ADMIN
+  OWNER
+}

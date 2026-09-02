@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment — these hold live database credentials, never commit them
+.env
+.env.*
+!.env.example
+.env.local
+*.local
+
+# Prisma
+# NB: prisma/migrations/ (including migration_lock.toml) IS committed on purpose —
+# it is the record of what has been applied to the live database.
+server/prisma/*.db
+server/prisma/*.db-journal
+
+# Uploads (media the couples send)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Logs & OS
+*.log
+.DS_Store
